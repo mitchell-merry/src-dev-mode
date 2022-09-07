@@ -16,6 +16,20 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 	if('status' in game) return game;
 	log("Successfully fetched data!");
 
+	// Add tooltips
+	const categoryTabs = document.querySelectorAll(".category-tab-name,.dropdown-item.category");
+
+	for(const tab of categoryTabs)
+	{
+		const tabName = tab.textContent.trimEnd();
+		if(tabName === "Misc.") continue;
+
+		const cat = game.categories.data.find(c => c.name === tabName);
+		const categoryId = cat?.id ?? "Unknown id"
+
+		tab.setAttribute('title', categoryId);
+	}
+
 	// add the SDM data box to the page if not already on
 	if(!document.querySelector('#sdm-data'))
 	{
@@ -23,12 +37,40 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 	
 		const data = document.createElement('div');
 		data.id = 'sdm-data';
+
+		const text = document.createElement('div');
+		text.id = 'sdm-text';
+		
+		data.appendChild(text)
 		rightEl.appendChild(data)
 	}
 	
 	// setup styles
 	const data = document.querySelector('#sdm-data');
-	data.style = 'padding: 5px; text-align: left; font-size: 12px; white-space: pre-wrap; background-color: #00000055; border-radius: 5px; height: calc(100% - 35px)';
+	if(!data) return 'data elemenet brokey (null)';
+	data.style = 'padding: 5px; text-align: left; font-size: 12px; white-space: pre-wrap; background-color: #00000055; border-radius: 5px; height: calc(100% - 35px); position: relative';
+	
+	const text = document.querySelector('#sdm-text');
+
+	if(!document.querySelector('#sdm-copy'))
+	{
+		const copyButton = document.createElement('a');
+		copyButton.id = 'sdm-copy';
+		data.appendChild(copyButton);
+	}
+
+	const copyButton = document.querySelector('#sdm-copy');
+	if(!copyButton) return 'copy brokey';
+
+	copyButton.textContent = '⎘';
+	copyButton.title = 'Copy JSON to clipboard';
+	copyButton.style.position = 'absolute';
+	copyButton.style.top = '5px';
+	copyButton.style.right = '5px';
+	copyButton.style.color = 'var(--theme-legacy-button-dark)';
+	copyButton.style.fontSize = '20px';
+	copyButton.style.cursor = 'pointer';
+	copyButton.addEventListener('click', () => navigator.clipboard.writeText(data.dataset.json));
 
 	const updateData = () => {
 		// current active category tab element, or the current active category from misc.
@@ -46,9 +88,16 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 		// mapping active subcategory labels to ids
 		variables = variables.map((variable, i) => [variable.id, Object.entries(variable.values.values).find(([key, val]) => val.label === activeLabels[i])[0]]);
 		
+		const leaderboardPartial = {
+			game: game.id,
+			category: activeTab.title,
+			variables: Object.fromEntries(variables)
+		}
+		data.dataset['json'] = JSON.stringify(leaderboardPartial, null, 2);
+
 		// formatting and setting output
 		const variablesLabels = variables.map(([variable, value]) => `\t${variable} - ${value}`).join('\n');
-		data.textContent = `Game ID: ${game.id}\nCategory ID: ${activeTab.title}\nSubcategories:\n${variablesLabels}`;
+		text.textContent = `Game ID: ${game.id}\nCategory ID: ${activeTab.title}\nSubcategories:\n${variablesLabels}`;
 	};
 
 	// listen for potential updates
