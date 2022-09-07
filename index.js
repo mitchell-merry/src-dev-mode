@@ -75,38 +75,58 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 	const updateData = async () => {
 		// current active category tab element, or the current active category from misc.
 		const activeTab = document.querySelector('.category-tab-name.active') ?? document.querySelector('.dropdown-item.category.active');
-		
+		const categoryId = activeTab.title;
+
 		// all the SRC subcategories (API) under the current category
-		let variables = game.categories.data.find(cat => cat.id === activeTab.title).variables.data.filter(v => v['is-subcategory'] && !!v.values.default);
+		const variableData = game.categories.data.find(cat => cat.id === categoryId).variables.data;
+		const subcategoriesData = variableData.filter(vari => vari['is-subcategory']);
 
 		// all the currently active subcategories (selected + visible)
-		const activeSubcats = Array.from(document.querySelectorAll('body.dark .custom-radio-group input[type="radio"]:checked + label,.dropdown.variable > label'))
-			.filter(label => label.parentElement.style.display !== "none");
-		// the names of the current active subcategories
-		const activeLabels = activeSubcats.map(t => t.textContent.trim());
-		console.log(variables)
-		
-		// mapping active subcategory labels to ids
-		variables = variables.map((variable, i) => [variable.id, Object.entries(variable.values.values)?.find(([key, val]) => val.label === activeLabels[i])?.[0]]);
-		
-		console.log(variables)
+		const subcatValues = Array.from(document.querySelectorAll('body.dark .custom-radio-group input[type="radio"]:checked + label,.dropdown.variable > label'))
+			.filter(label => label.parentElement.style.display !== "none").map(choice => choice.textContent.trim());
 
-		const leaderboardPartial = {
+		const subcategories = subcategoriesData.map((subcat, i) => {
+			return {
+				variable: subcat,
+				valueLabel: subcatValues[i],
+				valueId: Object.entries(subcat.values.values).find(([val, valObj]) => valObj.label === subcatValues[i])?.[0]
+			}
+		})
+
+		// selected filters
+		const filters = Array.from(document.querySelectorAll('.dropdown-submenu.var-filter'))
+		.filter(li => li.style.display !== "none")	
+		.map(vari => {
+			const activeVar = vari.querySelector("a.dropdown-item.dropdown-toggle");
+			const activeValue = vari.querySelector('ul > a.active');
+			
+			const variable = variableData.find(vari => vari.name === activeVar.textContent.trim());
+			const valueLabel = activeValue.textContent.trim();
+			
+			return {
+				variable, valueLabel,
+				valueId: Object.entries(variable.values.values).find(([val, valObj]) => valObj.label === valueLabel)?.[0]
+			}
+		});
+
+		const variables = [...subcategories, ...filters.filter(f => !!f.valueId)];
+
+		const board = {
 			game: game.id,
-			category: activeTab.title,
-			variables: Object.fromEntries(variables)
-		}
-		data.dataset['json'] = JSON.stringify(leaderboardPartial, null, 4);
+			category: categoryId,
+			variables: Object.fromEntries(variables.map(({ variable, valueId }) => [variable.id, valueId] ))
+		};
+		data.dataset['json'] = JSON.stringify(board, null, 4);
 
 		// formatting and setting output
-		const variablesLabels = variables.map(([variable, value]) => `\t${variable} - ${value}`).join('\n');
-		const content = `Game ID: ${game.id}\nCategory ID: ${activeTab.title}\nSubcategories:\n${variablesLabels}`;
+		const variablesLabels = variables.map(({ variable, valueLabel, valueId }) => `\t${variable.name} [${variable.id}] - ${valueLabel} [${valueId}]`).join('\n');
+		const content = `Game ID: ${board.game}\nCategory ID: ${board.category}\nVariables:\n${variablesLabels}\n\n `;
 		text.textContent = content;
 
-		await delay(100);
+		await delay(100); // not jank. scientific. very scientific
 		await waitForElm('#primary-leaderboard,#leaderboarddiv > div.center');
 		const count = Array.from(document.querySelectorAll('#primary-leaderboard > tbody:nth-child(2) > tr')).map(tr => tr.dataset['target'].split("/").pop()).length;
-		text.textContent = `${content}\n\n${count} runs in board.`;
+		text.textContent = `${content}${count} runs in board.`;
 	};
 
 	// listen for potential updates
