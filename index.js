@@ -93,7 +93,7 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 			category: activeTab.title,
 			variables: Object.fromEntries(variables)
 		}
-		data.dataset['json'] = JSON.stringify(leaderboardPartial, null, 2);
+		data.dataset['json'] = JSON.stringify(leaderboardPartial, null, 4);
 
 		// formatting and setting output
 		const variablesLabels = variables.map(([variable, value]) => `\t${variable} - ${value}`).join('\n');
