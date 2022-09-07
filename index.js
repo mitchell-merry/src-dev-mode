@@ -72,6 +72,26 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 	copyButton.style.cursor = 'pointer';
 	copyButton.addEventListener('click', () => navigator.clipboard.writeText(data.dataset.json));
 
+	if(!document.querySelector('#sdm-close'))
+	{
+		const closeButton = document.createElement('a');
+		closeButton.id = 'sdm-close';
+		data.appendChild(closeButton);
+	}
+	
+	const closeButton = document.querySelector('#sdm-close');
+	if(!closeButton) return 'close brokey';
+
+	closeButton.textContent = '✕';
+	closeButton.title = 'Close this debug window';
+	closeButton.style.position = 'absolute';
+	closeButton.style.top = '0px';
+	closeButton.style.right = '5px';
+	closeButton.style.color = 'var(--theme-legacy-button-dark)';
+	closeButton.style.fontSize = '15px';
+	closeButton.style.cursor = 'pointer';
+	closeButton.addEventListener('click', () => data.style.display = "none");
+	
 	const updateData = async () => {
 		// current active category tab element, or the current active category from misc.
 		const activeTab = document.querySelector('.category-tab-name.active') ?? document.querySelector('.dropdown-item.category.active');
