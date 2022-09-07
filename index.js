@@ -65,29 +65,32 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 	copyButton.textContent = '⎘';
 	copyButton.title = 'Copy JSON to clipboard';
 	copyButton.style.position = 'absolute';
-	copyButton.style.top = '5px';
+	copyButton.style.bottom = '5px';
 	copyButton.style.right = '5px';
 	copyButton.style.color = 'var(--theme-legacy-button-dark)';
 	copyButton.style.fontSize = '20px';
 	copyButton.style.cursor = 'pointer';
 	copyButton.addEventListener('click', () => navigator.clipboard.writeText(data.dataset.json));
 
-	const updateData = () => {
+	const updateData = async () => {
 		// current active category tab element, or the current active category from misc.
 		const activeTab = document.querySelector('.category-tab-name.active') ?? document.querySelector('.dropdown-item.category.active');
 		
 		// all the SRC subcategories (API) under the current category
-		let variables = game.categories.data.find(cat => cat.id === activeTab.title).variables.data.filter(v => v.mandatory && !!v.values.default);
+		let variables = game.categories.data.find(cat => cat.id === activeTab.title).variables.data.filter(v => v['is-subcategory'] && !!v.values.default);
 
 		// all the currently active subcategories (selected + visible)
 		const activeSubcats = Array.from(document.querySelectorAll('body.dark .custom-radio-group input[type="radio"]:checked + label,.dropdown.variable > label'))
 			.filter(label => label.parentElement.style.display !== "none");
 		// the names of the current active subcategories
 		const activeLabels = activeSubcats.map(t => t.textContent.trim());
+		console.log(variables)
 		
 		// mapping active subcategory labels to ids
-		variables = variables.map((variable, i) => [variable.id, Object.entries(variable.values.values).find(([key, val]) => val.label === activeLabels[i])[0]]);
+		variables = variables.map((variable, i) => [variable.id, Object.entries(variable.values.values)?.find(([key, val]) => val.label === activeLabels[i])?.[0]]);
 		
+		console.log(variables)
+
 		const leaderboardPartial = {
 			game: game.id,
 			category: activeTab.title,
@@ -97,7 +100,13 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 
 		// formatting and setting output
 		const variablesLabels = variables.map(([variable, value]) => `\t${variable} - ${value}`).join('\n');
-		text.textContent = `Game ID: ${game.id}\nCategory ID: ${activeTab.title}\nSubcategories:\n${variablesLabels}`;
+		const content = `Game ID: ${game.id}\nCategory ID: ${activeTab.title}\nSubcategories:\n${variablesLabels}`;
+		text.textContent = content;
+
+		await delay(100);
+		await waitForElm('#primary-leaderboard,#leaderboarddiv > div.center');
+		const count = Array.from(document.querySelectorAll('#primary-leaderboard > tbody:nth-child(2) > tr')).map(tr => tr.dataset['target'].split("/").pop()).length;
+		text.textContent = `${content}\n\n${count} runs in board.`;
 	};
 
 	// listen for potential updates
@@ -109,3 +118,28 @@ const log = (str) => console.log(`[SRC-DEV-MODE] ${str}`);
 
 	return "Done!";
 })().then(log);
+
+
+// https://stackoverflow.com/questions/5525071/how-to-wait-until-an-element-exists
+function waitForElm(selector) {
+    return new Promise(resolve => {
+        if (document.querySelector(selector)) {
+            return resolve(document.querySelector(selector));
+        }
+
+        const observer = new MutationObserver(mutations => {
+            if (document.querySelector(selector)) {
+                resolve(document.querySelector(selector));
+                observer.disconnect();
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    });
+}
+
+// https://stackoverflow.com/questions/14226803/wait-5-seconds-before-executing-next-line
+const delay = ms => new Promise(res => setTimeout(res, ms));
